@@ -1,7 +1,7 @@
 package Geo::CountryFlags;
 
 use vars qw($VERSION);
-$VERSION = do { my @r = (q$Revision: 0.01 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.02 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 use strict;
 
 =head1 NAME
@@ -15,8 +15,8 @@ use strict;
   $gf = new Geo::CountryFlags(	# optional
 	['cia_url',
 	 \%country_code => cia_code,
-	dir_umask,	# default 0775
-	file_umask,	# default 0664
+	dir_umask,	# default 02
+	file_umask,	# default 0113
 	]
 
   defaults:
@@ -229,9 +229,14 @@ To fetch a single flag PATH the usage is simply:
 
 =item $gf = new Geo::CountryFlags('cia_url',\%cc2cia,$dm,$um);
 
-  input:	fetch flags from (optional)
-		conversion hash (optional)
+  input:	fetch flags from (optional),
+		conversion hash (optional),
+		directory mask (optional),
+		file mask (optional),
 
+	default dir mask   002 (775)
+	default file mask 0113 (664)
+		
   output:	path_to/img.file
 		or undef on failure
 
@@ -267,6 +272,7 @@ sub new {
 		connect or retrieve file
 		from target flag server
 		(only set on undef return)
+
 =cut
 
 sub get_flag {
@@ -300,6 +306,8 @@ sub get_flag {
 		undef is cia code
 		is known absent
 
+=back
+
 =cut
 
 sub cc2cia {
@@ -310,12 +318,8 @@ sub cc2cia {
   }
   return $cia;
 }
-1
+1;
 __END__
-
-=cut
-
-=back
 
 =head1 UTILITIES
 
@@ -372,3 +376,5 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 =cut
+
+1;
