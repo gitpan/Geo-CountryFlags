@@ -1,5 +1,8 @@
 Revision history for Perl Geo::CountryFlags
 
+0.03  Mon Sep 11 16:36:34 PDT 2006
+	update 'mkdir' for perl 5.0503 compatibility
+
 0.02  Sat Nov  8 13:14:16 PST 2003
 	clean up a couple of typo's in the documentation
 

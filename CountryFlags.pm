@@ -1,7 +1,7 @@
 package Geo::CountryFlags;
 
 use vars qw($VERSION);
-$VERSION = do { my @r = (q$Revision: 0.02 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.03 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 use strict;
 
 =head1 NAME
@@ -280,7 +280,7 @@ sub get_flag {
   $fd = './flags' unless $fd;
   unless ( -e $fd ) {
     umask $self->{dmask};
-    mkdir $fd;
+    mkdir $fd, 0755;
   }
   local $_ = eval {"${fd}/${cc}-flag.gif"};	# clear $@
   return $_ if -e $_;		# return flag if it exists
