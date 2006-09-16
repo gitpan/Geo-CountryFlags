@@ -1,212 +1,56 @@
+#!/usr/bin/perl
 package Geo::CountryFlags;
-
-use vars qw($VERSION);
-$VERSION = do { my @r = (q$Revision: 0.03 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 use strict;
+use Geo::CountryFlags::I2C;
+use vars qw($VERSION);
+$VERSION = do { my @r = (q$Revision: 1.00 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+
+my $i2c = subref Geo::CountryFlags::I2C;
 
 =head1 NAME
 
-  Geo::CountryFlags - methods to fetch flag gif's
+  Geo::CountryFlags - dynamically fetch flag gif's from CIA
 
 =head1 SYNOPSIS
 
   use Geo::CountryFlags
 
-  $gf = new Geo::CountryFlags(	# optional
-	['cia_url',
-	 \%country_code => cia_code,
-	dir_umask,	# default 02
-	file_umask,	# default 0113
-	]
+  $gcf = new Geo::CountryFlags;
 
-  defaults:
-  http://www.cia.gov/cia/publications/factbook/flags/
-  %cc2cia current as of 1-24-03
+return a local path to the flag file
+fetch the file from CIA if necessary
+and put it in the flag directory
 
-  # return a local path to the flag file
-  # fetch the file from CIA if necessary
-  $flag_path = $gf->get_flag($country_code,[flag_dir])
+  $flag_path = $gcf->get_flag($country_code,[flag_dir])
 
   default:
   flag_dir = ./flags
 
-  # return the CIA country code (non-iso)
-  # used mostly internally
-  $cia_code = $gf->cc2cia($country_code)
+retrieve the CIA country code
 
-=cut
+  $cia_code	= $gcf->cc2cia($country_code)
 
-my $CIAurl = 'http://www.cia.gov/cia/publications/factbook/flags/';
+retrieve the ISO country name
 
-# country code to cia flag prefix hash
-# if CIA changes codes, update this
+  $gci = new Geo::CountryFlags::ISO;
+  $country_name	= $gci->value($country_code);
 
-my %cc2cia = (
-AS	=> 'AQ',
-AQ	=> undef,
-AU	=> 'AS',
-AT	=> 'AU',
-BS	=> 'BF',
-BY	=> 'BO',
-BF	=> 'UV',
-TD	=> 'CD',
-AP	=> undef,
-EU	=> undef,	# it's Europa Island @CIA
-AD	=> 'AN',
-AE	=> 'TC',
-AN	=> 'NT',
-TC	=> 'TK',
-AI	=> 'AV',
-AW	=> 'AA',
-AZ	=> 'AJ',
-BI	=> 'BY',
-BO	=> 'BL',
-BJ	=> 'BN',
-BN	=> 'BX',
-BW	=> 'BC',
-BZ	=> 'BH',
-BH	=> 'BA',
-BA	=> 'BK',
-CC	=> 'CK',
-CK	=> 'CW',
-CG	=> 'CF',
-CF	=> 'CT',
-CD	=> 'CG',
-CL	=> 'CI',
-CI	=> 'IV',
-CR	=> 'CS',
-CX	=> 'KT',
-CZ	=> 'EZ',
-DE	=> 'GM',
-GM	=> 'GA',
-GA	=> 'GB',
-GB	=> 'UK',
-DK	=> 'DA',
-DM	=> 'DO',
-DO	=> 'DR',
-DZ	=> 'AG',
-AG	=> 'AC',
-EE	=> 'EN',
-EH	=> undef,
-FX	=> 'FR',
-GD	=> 'GJ',
-'GE'	=> 'GG',
-GF	=> 'FG',
-GN	=> 'GV',
-GS	=> 'SX',
-GU	=> 'GQ',
-GQ	=> 'EK',
-GW	=> 'PU',
-HN	=> 'HO',
-HT	=> 'HA',
-IE	=> 'EI',
-IL	=> 'IS',
-IS	=> 'IC',
-IQ	=> 'IZ',
-JP	=> 'JA',
-KH	=> 'CB',
-KI	=> 'KR',
-KR	=> 'KS',
-KP	=> 'KN',
-KN	=> 'SC',
-SC	=> 'SE',
-SE	=> 'SW',
-KM	=> 'CN',
-CN	=> 'CH',
-CH	=> 'SZ',
-SZ	=> 'WZ',
-KW	=> 'KU',
-KY	=> 'CJ',
-LB	=> 'LE',
-LC	=> 'ST',
-ST	=> 'TP',
-SN	=> 'SG',
-SG	=> 'SN',
-LK	=> 'CE',
-LR	=> 'LI',
-LI	=> 'LS',
-LS	=> 'LT',
-'LT'	=> 'LH',
-LV	=> 'LG',
-MG	=> 'MA',
-MA	=> 'MO',
-MO	=> 'MC',
-MM	=> 'BM',
-MQ	=> 'MB',
-MU	=> 'MP',
-MP	=> 'CQ',
-BM	=> 'BD',
-BD	=> 'BG',
-BG	=> 'BU',
-MC	=> 'MN',
-MN	=> 'MG',
-MS	=> 'MH',
-MH	=> 'RM',
-MW	=> 'MI',
-NA	=> 'WA',
-NI	=> 'NU',
-'NE'	=> 'NG',
-NG	=> 'NI',
-NU	=> 'NE',
-OM	=> 'MU',
-PF	=> 'FP',
-PG	=> 'PP',
-PH	=> 'RP',
-PN	=> 'PC',
-PR	=> 'RQ',
-PT	=> 'PO',
-PW	=> 'PS',
-PS	=> undef,
-PY	=> 'PA',
-PA	=> 'PM',
-PM	=> 'SB',
-SB	=> 'BP',
-RU	=> 'RS',
-SD	=> 'SU',
-SJ	=> 'SV',
-SV	=> 'ES',
-ES	=> 'SP',
-SK	=> 'LO',
-SR	=> 'NS',
-TF	=> 'FS',
-TK	=> 'TL',
-TG	=> 'TO',
-TO	=> 'TN',
-TN	=> 'TS',
-TJ	=> 'TI',
-TM	=> 'TX',
-TP	=> 'TT',
-TR	=> 'TU',
-TT	=> 'TD',
-UA	=> 'UP',
-UM	=> undef,
-VG	=> 'VI',
-VI	=> 'VQ',
-VN	=> 'VM',
-VU	=> 'NH',
-YE	=> 'YM',
-YT	=> 'MF',
-VA	=> 'VT',
-VT	=> 'MF',
-YU	=> 'YI',
-ZM	=> 'ZA',
-ZA	=> 'SF',
-ZR	=> 'CG',
-ZW	=> 'ZI',
-A1	=> undef,
-A2	=> undef,
-);
+retrieve the CIA country name
+
+  $gcc = new Geo::CountryFlags::CIA;
+  $country_name = $gcc->value($cia_code);
 
 =head1 DESCRIPTION
 
-Provides methods to display / retrieve flag gifs from the web
+Provides methods to display / retrieve flag gifs dynamically from the web
 site of the Central Intelligence Agency. Permanently caches a
-local copy of the flag if it is not already present.
+local copy of the flag gif in your web site sub directory.
 
 The flags for all country codes as of module publication are included
 in the ./flags directory should you wish to install them. However,
 If LWP::Simple is installed, Geo::CountryFlags will fetch them as needed
-and store them in ./flags [default] or the directory of you choice.
+and store them in ./flags [default] or the directory of you choice on your
+web site.
 
 To fetch a single flag PATH the usage is simply:
 
@@ -216,10 +60,10 @@ To fetch a single flag PATH the usage is simply:
 
   for multiple flags:
 
-  $gf = new Geo::CountryFlags;
+  $gcf = new Geo::CountryFlags;
   for (blah.... blah) {
     my $cc = function_of(blah...);
-    my $flag_path = $gf->get_flag($cc);
+    my $flag_path = $gcf->get_flag($cc);
     ....
   }
 
@@ -227,34 +71,18 @@ To fetch a single flag PATH the usage is simply:
 
 =over 4
 
-=item $gf = new Geo::CountryFlags('cia_url',\%cc2cia,$dm,$um);
+=item $gcf = new Geo::CountryFlags;
 
-  input:	fetch flags from (optional),
-		conversion hash (optional),
-		directory mask (optional),
-		file mask (optional),
-
-	default dir mask   002 (775)
-	default file mask 0113 (664)
-		
-  output:	path_to/img.file
-		or undef on failure
+  input:	none
+  returns:	blessed package reference
 
 =cut
 
 sub new {
-  my ($proto,$cia_url,$cc2cia,$dm,$fm) = @_;
+  my $proto = shift;
   my $class = ref($proto) || $proto;
-  my $self  = {
-	cia_url	=> $cia_url || $CIAurl,
-	cc2cia	=> $cc2cia || \%cc2cia,
-	dmask	=> $dm || 02,
-	fmask	=> $fm || 0113,
-	};
-  $self->{cia_url} .= '/' unless
-	$self->{cia_url} =~ m|/$|;
-  bless ($self, $class);
-  return $self;
+  my $self  = {};
+  bless $self, $class;
 }
 
 =item $flag_path=$gf->get_flag($country_code,[flag_dir]);
@@ -275,27 +103,37 @@ sub new {
 
 =cut
 
+my $gcu;
+
 sub get_flag {
   my ($self,$cc,$fd) = @_;
+  return undef unless $cc;
   $fd = './flags' unless $fd;
-  unless ( -e $fd ) {
-    umask $self->{dmask};
-    mkdir $fd, 0755;
+  unless ( -e $fd) {
+    if (-d $fd) {
+      eval {die "$fd is not a directory"};
+      return undef;
+    } else {
+      mkdir $fd, 0755;
+    }
   }
-  local $_ = eval {"${fd}/${cc}-flag.gif"};	# clear $@
-  return $_ if -e $_;		# return flag if it exists
-  return undef unless ($_ = &cc2cia($self,$cc));
-  $_ = lc $_;
-  eval {require LWP::Simple};
-  return undef if $@;
-  umask $self->{fmask};
+  undef $@;
+  my $fp = $fd .'/'. $cc .'-flag.gif';
+  return $fp if -e $fp;			# return flag if it exists
+
+  my $cia = $i2c->($cc) or return undef;
+  require LWP::Simple;
+  unless ($gcu) {
+    require Geo::CountryFlags::URLs;
+    $gcu = new Geo::CountryFlags::URLs;
+  }
   return undef unless eval {		# response must be 200, OK
 	200 == ($_ = &LWP::Simple::getstore(
-		$self->{cia_url}."$_-flag.gif",
-		"${fd}/${cc}-flag.gif")) ||
+		$gcu->CIAFLAGS . $cia .'-flag.gif',
+		$fp)) ||
 		die $_
 	};
-  return "${fd}/${cc}-flag.gif";
+  return $fp;
 }
 
 =item $cia_code=$gf->cc2cia($country_code);
@@ -306,74 +144,134 @@ sub get_flag {
 		undef is cia code
 		is known absent
 
+=cut
+
+sub cc2cia {
+  shift;
+  goto &$i2c;
+}
+
+=pod
+
 =back
 
 =cut
 
-sub cc2cia {
-  my ($self,$cc) = @_;
-  my $cia     = $cc;
-  if (exists $self->{cc2cia}{$cc}) {
-    return undef unless ($cia = $self->{cc2cia}{$cc});
-  }
-  return $cia;
-}
 1;
 __END__
+
+=head1 MODULE UPDATES
+
+This module has several extensions that are auto-created by the data
+directly from the CIA and ISO web sites. To force a rebuild follow this
+procedure:
+
+	perl Makefile.PL
+	make realclean
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+This modules has two files that allow you to keep it up to date.
+
+	Valid_Urls
+	Map_Exceptions
+
+=over 4
+
+=item * Valid_Urls
+
+This file contains the valid URL's for the CIA flags page, the CIA flags
+directory and the ISO flag code text files. If these change, you can updated
+the Valid_Urls file then remake the module as follows:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+=item * Map_Exceptions
+
+During the 'perl Makefile.PL' process, the unmatched entries from both the
+ISO and CIA data bases are printed in the terminal window. The
+Map_Exceptions file should be updated so that the left hand side contains
+the exact text from the ISO data that does not match and the right hand side
+contains at least the minimum text from the related CIA data that will uniquely match the ISO data.
+
+=back
 
 =head1 UTILITIES
 
 The ./util directory contains two utility programs
 
-  get_flags.pl
+	get_flags.pl
+	make_htm.pl
+
+=head2 get_flags.pl names
+
+    lists all flags by: [sorted by country name]
+      country-code, CIA-code, ISO country-name
+
+=head2 get_flags.pl
 
     retrieves all flags from CIA and stores 
-    in local directory ./flags
+    in locally created directory ./flags
 
-  get_flags.pl names {any text}
+If run from the build directory after module installation, this script will
+create/update the B<flags> directory with all available ISO flags matching
+the CIA database. If the module is remade from scratch with a
 
-    lists all flags by: {sorted by name}
-      country-code, CIA-code, country-name
+  make realclean
 
-  make_htm.pl
+this process will update the MANIFEST with the new B<flag> list as well.
+
+=head2 make_htm.pl
 
     prints the text for an html page containing all
     the flags sorted by country name from a 
     local ./flags directory
 
-=head1 SEE ALSO
+=head1 DEPENDENCIES
 
-Geo::IP::PurePerl
+	File::SafeDO
+	LWP::Simple	[optional]
 
-=head1 AUTHORS
+LWP::Simple is required for dynamic operation. If you are simply going to
+server static gifs from the flags directory without EVER fetching a new one
+from the CIA, then LWP::Simple is not needed.
+
+Likewise, if you intend to use this module in conjunction with showing flags
+for IP addresses, then you want to have a look at either;
+
+	Geo::IP::PurePerl
+    or
+	Geo::IP
+
+=head1 AUTHOR
 
 Michael Robinton michael@bizsystems.com
 
 =head1 COPYRIGHT and LICENSE
 
-  Copyright 2003 Michael Robinton, BizSystems.
+  Copyright 2003 - 2006 Michael Robinton, michael@bizsystems.com
 
 This module is free software; you can redistribute it and/or modify it
-under the terms of either:
-
-  a) the GNU General Public License as published by the Free Software
-  Foundation; either version 1, or (at your option) any later version,
-  
-  or
-
-  b) the "Artistic License" which comes with this module.
+under the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 1, or (at your option) any later version,
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of 
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See either
 the GNU General Public License or the Artistic License for more details.
 
-You should have received a copy of the Artistic License with this
-module, in the file ARTISTIC.  If not, I'll be glad to provide one.
-
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+=head1 SEE ALSO
+
+Geo::IP::PurePerl
 
 =cut
 
