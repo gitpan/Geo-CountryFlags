@@ -1,5 +1,8 @@
 Revision history for Perl Geo::CountryFlags
 
+1.01  Thu Oct 16 19:35:33 PDT 2008
+	updated Makefile.PL so PREQU's load properly in smokers
+
 1.00  Fri Sep 15 19:42:25 PDT 2006
 	Revised to support semi-automatic maintence of flag code cross
 	reference between ISO and CIA sites.

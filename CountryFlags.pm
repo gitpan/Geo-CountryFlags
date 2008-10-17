@@ -3,7 +3,7 @@ package Geo::CountryFlags;
 use strict;
 use Geo::CountryFlags::I2C;
 use vars qw($VERSION);
-$VERSION = do { my @r = (q$Revision: 1.00 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 1.01 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 my $i2c = subref Geo::CountryFlags::I2C;
 

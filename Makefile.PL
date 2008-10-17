@@ -5,6 +5,18 @@ use ExtUtils::MakeMaker;
 my $pkg = 'Geo::CountryFlags';
 $pkg =~ /[^:]+$/;
 my $module = $& .'.pm';
+
+WriteMakefile(
+    'NAME'		=> $pkg,
+    'PREREQ_PM'		=> {	'LWP::Simple'	=> '0',
+				'File::SafeDO'	=> 0.11,
+			},
+    'VERSION_FROM'	=> $module, 	# finds $VERSION
+    'dist'		=> {COMPRESS=>'gzip', SUFFIX=>'gz'},
+    'clean'		=> {FILES => "tmp* *~ ${lib}/*~"},
+    'realclean'		=> {FILES => $checked},
+);
+
 (my $lib = $pkg) =~ s|::|/|g;
 $lib = 'lib/'. $lib;
 
@@ -146,13 +158,4 @@ if ($updatexref) {		# update the flags and MANIFEST
   }
 }
 
-WriteMakefile(
-    'NAME'		=> $pkg,
-    'PREREQ_PM'		=> {	'LWP::Simple'	=> '0',
-				'File::SafeDO'	=> 0.11,
-			},
-    'VERSION_FROM'	=> $module, 	# finds $VERSION
-    'dist'		=> {COMPRESS=>'gzip', SUFFIX=>'gz'},
-    'clean'		=> {FILES => "tmp* *~ ${lib}/*~"},
-    'realclean'		=> {FILES => $checked},
-);
+1;
